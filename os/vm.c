@@ -8,7 +8,7 @@ extern char e_text[]; // kernel.ld sets this to end of kernel code.
 extern char trampoline[];
 
 // Make a direct-map page table for the kernel.
-pagetable_t kvmmake(void)
+pagetable_t kvmmake()
 {
 	pagetable_t kpgtbl;
 	kpgtbl = (pagetable_t)kalloc();
@@ -26,7 +26,7 @@ pagetable_t kvmmake(void)
 // Initialize the one kernel_pagetable
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
-void kvm_init(void)
+void kvm_init()
 {
 	kernel_pagetable = kvmmake();
 	w_satp(MAKE_SATP(kernel_pagetable));
@@ -117,8 +117,10 @@ int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 	a = PGROUNDDOWN(va);
 	last = PGROUNDDOWN(va + size - 1);
 	for (;;) {
-		if ((pte = walk(pagetable, a, 1)) == 0)
+		if ((pte = walk(pagetable, a, 1)) == 0) {
+			errorf("pte invalid, va = %p", a);
 			return -1;
+		}
 		if (*pte & PTE_V) {
 			errorf("remap");
 			return -1;
@@ -160,7 +162,7 @@ void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
 // create an empty user page table.
 // returns 0 if out of memory.
-pagetable_t uvmcreate()
+pagetable_t uvmcreate(uint64 trapframe)
 {
 	pagetable_t pagetable;
 	pagetable = (pagetable_t)kalloc();
@@ -171,9 +173,11 @@ pagetable_t uvmcreate()
 	memset(pagetable, 0, PGSIZE);
 	if (mappages(pagetable, TRAMPOLINE, PAGE_SIZE, (uint64)trampoline,
 		     PTE_R | PTE_X) < 0) {
-		kfree(pagetable);
-		errorf("uvmcreate: mappages error");
-		return 0;
+		panic("mappages fail");
+	}
+	if (mappages(pagetable, TRAPFRAME, PGSIZE, trapframe, PTE_R | PTE_W) <
+	    0) {
+		panic("mappages fail");
 	}
 	return pagetable;
 }
@@ -207,6 +211,38 @@ void uvmfree(pagetable_t pagetable, uint64 max_page)
 	if (max_page > 0)
 		uvmunmap(pagetable, 0, max_page, 1);
 	freewalk(pagetable);
+}
+
+// Used in fork.
+// Copy the pagetable page and all the user pages.
+// Return 0 on success, -1 on error.
+int uvmcopy(pagetable_t old, pagetable_t new, uint64 max_page)
+{
+	pte_t *pte;
+	uint64 pa, i;
+	uint flags;
+	char *mem;
+
+	for (i = 0; i < max_page * PAGE_SIZE; i += PGSIZE) {
+		if ((pte = walk(old, i, 0)) == 0)
+			continue;
+		if ((*pte & PTE_V) == 0)
+			continue;
+		pa = PTE2PA(*pte);
+		flags = PTE_FLAGS(*pte);
+		if ((mem = kalloc()) == 0)
+			goto err;
+		memmove(mem, (char *)pa, PGSIZE);
+		if (mappages(new, i, PGSIZE, (uint64)mem, flags) != 0) {
+			kfree(mem);
+			goto err;
+		}
+	}
+	return 0;
+
+err:
+	uvmunmap(new, 0, i / PGSIZE, 1);
+	return -1;
 }
 
 // Copy from kernel to user.

@@ -1,5 +1,5 @@
-.PHONY: clean build user
-all: build_kernel
+.PHONY: clean build user run debug test .FORCE
+all: build
 
 K = os
 
@@ -57,6 +57,9 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
 CFLAGS += -fno-pie -nopie
 endif
 
+# empty target
+.FORCE:
+
 LDFLAGS = -z max-page-size=4096
 
 $(AS_OBJS): $(BUILDDIR)/$K/%.o : $K/%.S
@@ -73,10 +76,12 @@ $(HEADER_DEP): $(BUILDDIR)/$K/%.d : $K/%.c
         sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
         rm -f $@.$$$$
 
+INIT_PROC ?= usershell
+
 os/link_app.o: $K/link_app.S
-os/link_app.S: scripts/pack.py
-	@$(PY) scripts/pack.py
-os/kernel_app.ld: scripts/kernelld.py
+os/link_app.S: scripts/pack.py .FORCE
+	@$(PY) scripts/pack.py $(INIT_PROC)
+os/kernel_app.ld: scripts/kernelld.py .FORCE
 	@$(PY) scripts/kernelld.py
 
 build: build/kernel
@@ -89,7 +94,6 @@ build/kernel: $(OBJS) os/kernel_app.ld
 
 clean:
 	rm -rf $(BUILDDIR) os/kernel_app.ld os/link_app.S
-	make -C user clean
 
 # BOARD
 BOARD		?= qemu
@@ -117,8 +121,6 @@ debug: build/kernel .gdbinit
 	$(GDB)
 
 CHAPTER ?= $(shell git rev-parse --abbrev-ref HEAD | grep -oP 'ch\K[0-9]')
-
-BASE ?= 0
 
 user:
 	make -C user CHAPTER=$(CHAPTER) BASE=$(BASE)

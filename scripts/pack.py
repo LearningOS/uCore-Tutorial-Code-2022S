@@ -2,7 +2,13 @@ import os
 
 TARGET_DIR = "./user/target/bin/"
 
+import argparse
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('INIT_PROC', default="usershell")
+    args = parser.parse_args()
+
     f = open("os/link_app.S", mode="w")
     apps = os.listdir(TARGET_DIR)
     apps.sort()
@@ -26,8 +32,14 @@ _app_names:
 ''');
 
     for app in apps:
-        app = app[:app.find('.')]
         f.write("   .string \"" + app + "\"\n")
+
+    f.write(
+'''
+    .global INIT_PROC
+INIT_PROC:
+    .string \"{0}\"
+'''.format(args.INIT_PROC));
 
     for (idx, app) in enumerate(apps):
         f.write(
