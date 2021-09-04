@@ -291,6 +291,7 @@ static inline void sfence_vma()
 
 #define PGROUNDUP(sz) (((sz) + PGSIZE - 1) & ~(PGSIZE - 1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE - 1))
+#define PGALIGNED(a) (((a) & (PGSIZE - 1)) == 0)
 
 #define PTE_V (1L << 0) // valid
 #define PTE_R (1L << 1)
@@ -317,6 +318,7 @@ static inline void sfence_vma()
 #define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
 
 typedef uint64 pte_t;
+typedef uint64 pde_t;
 typedef uint64 *pagetable_t; // 512 PTEs
 
 #endif // RISCV_H

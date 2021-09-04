@@ -14,7 +14,10 @@ void clean_bss()
 void main()
 {
 	clean_bss();
+	printf("hello world!\n");
 	proc_init();
+	kinit();
+	kvm_init();
 	loader_init();
 	trap_init();
 	timer_init();

@@ -5,19 +5,19 @@
 #include "timer.h"
 
 extern char trampoline[], uservec[];
-extern void *userret(uint64);
+extern char userret[];
 
 void kerneltrap()
 {
 	if ((r_sstatus() & SSTATUS_SPP) == 0)
 		panic("kerneltrap: not from supervisor mode");
-	panic("trap from kernel\n");
+	panic("trap from kerne");
 }
 
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void)
 {
-	w_stvec((uint64)uservec & ~0x3); // DIRECT
+	w_stvec(((uint64)TRAMPOLINE + (uservec - trampoline)) & ~0x3); // DIRECT
 }
 
 void set_kerneltrap(void)
@@ -28,12 +28,13 @@ void set_kerneltrap(void)
 // set up to take exceptions and traps while in the kernel.
 void trap_init(void)
 {
+	// intr_on();
 	set_kerneltrap();
 }
 
 void unknown_trap()
 {
-	errorf("unknown trap: %p, stval = %p\n", r_scause(), r_stval());
+	errorf("unknown trap: %p, stval = %p", r_scause(), r_stval());
 	exit(-1);
 }
 
@@ -45,7 +46,7 @@ void usertrap()
 {
 	set_kerneltrap();
 	struct trapframe *trapframe = curr_proc()->trapframe;
-
+	tracef("trap from user epc = %p", trapframe->epc);
 	if ((r_sstatus() & SSTATUS_SPP) != 0)
 		panic("usertrap: not from user mode");
 
@@ -54,7 +55,7 @@ void usertrap()
 		cause &= ~(1ULL << 63);
 		switch (cause) {
 		case SupervisorTimer:
-			tracef("time interrupt!\n");
+			tracef("time interrupt!");
 			set_next_timer();
 			yield();
 			break;
@@ -74,13 +75,13 @@ void usertrap()
 		case InstructionPageFault:
 		case LoadMisaligned:
 		case LoadPageFault:
-			printf("%d in application, bad addr = %p, bad instruction = %p, "
-			       "core dumped.\n",
+			errorf("%d in application, bad addr = %p, bad instruction = %p, "
+			       "core dumped.",
 			       cause, r_stval(), trapframe->epc);
 			exit(-2);
 			break;
 		case IllegalInstruction:
-			printf("IllegalInstruction in application, core dumped.\n");
+			errorf("IllegalInstruction in application, core dumped.");
 			exit(-3);
 			break;
 		default:
@@ -100,9 +101,9 @@ void usertrapret()
 	struct trapframe *trapframe = curr_proc()->trapframe;
 	trapframe->kernel_satp = r_satp(); // kernel page table
 	trapframe->kernel_sp =
-		curr_proc()->kstack + PGSIZE; // process's kernel stack
+		curr_proc()->kstack + KSTACK_SIZE; // process's kernel stack
 	trapframe->kernel_trap = (uint64)usertrap;
-	trapframe->kernel_hartid = r_tp(); // hartid for cpuid()
+	trapframe->kernel_hartid = r_tp(); // unuesd
 
 	w_sepc(trapframe->epc);
 	// set up the registers that trampoline.S's sret will use
@@ -115,6 +116,8 @@ void usertrapret()
 	w_sstatus(x);
 
 	// tell trampoline.S the user page table to switch to.
-	// uint64 satp = MAKE_SATP(p->pagetable);
-	userret((uint64)trapframe);
+	uint64 satp = MAKE_SATP(curr_proc()->pagetable);
+	uint64 fn = TRAMPOLINE + (userret - trampoline);
+	tracef("return to user @ %p", trapframe->epc);
+	((void (*)(uint64, uint64))fn)(TRAPFRAME, satp);
 }

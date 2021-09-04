@@ -5,15 +5,19 @@
 #include "timer.h"
 #include "trap.h"
 
-uint64 sys_write(int fd, char *str, uint len)
+uint64 sys_write(int fd, uint64 va, uint len)
 {
-	debugf("sys_write fd = %d str = %x, len = %d", fd, str, len);
+	debugf("sys_write fd = %d va = %x, len = %d", fd, va, len);
 	if (fd != STDOUT)
 		return -1;
-	for (int i = 0; i < len; ++i) {
+	struct proc *p = curr_proc();
+	char str[MAX_STR_LEN];
+	int size = copyinstr(p->pagetable, str, va, MIN(len, MAX_STR_LEN));
+	debugf("size = %d", size);
+	for (int i = 0; i < size; ++i) {
 		console_putchar(str[i]);
 	}
-	return len;
+	return size;
 }
 
 __attribute__((noreturn)) void sys_exit(int code)
@@ -30,9 +34,15 @@ uint64 sys_sched_yield()
 
 uint64 sys_gettimeofday(TimeVal *val, int _tz)
 {
-	uint64 cycle = get_cycle();
-	val->sec = cycle / CPU_FREQ;
-	val->usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
+	// YOUR CODE
+	val->sec = 0;
+	val->usec = 0;
+
+	/* The code in `ch3` will leads to memory bugs*/
+
+	// uint64 cycle = get_cycle();
+	// val->sec = cycle / CPU_FREQ;
+	// val->usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
 	return 0;
 }
 
@@ -48,7 +58,7 @@ void syscall()
 	       args[1], args[2], args[3], args[4], args[5]);
 	switch (id) {
 	case SYS_write:
-		ret = sys_write(args[0], (char *)args[1], args[2]);
+		ret = sys_write(args[0], args[1], args[2]);
 		break;
 	case SYS_exit:
 		sys_exit(args[0]);
