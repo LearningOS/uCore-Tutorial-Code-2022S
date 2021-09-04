@@ -67,6 +67,7 @@ found:
 	memset(&p->context, 0, sizeof(p->context));
 	memset((void *)p->kstack, 0, KSTACK_SIZE);
 	memset((void *)p->trapframe, 0, TRAP_PAGE_SIZE);
+	memset((void *)p->files, 0, sizeof(struct file *) * FD_BUFFER_SIZE);
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + KSTACK_SIZE;
 	return p;
@@ -83,7 +84,7 @@ void scheduler()
 	for (;;) {
 		for (p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
-				tracef("swtich to proc %d", p - pool);
+				debugf("swtich to proc %d", p->pid);
 				p->state = RUNNING;
 				current_proc = p;
 				swtch(&idle.context, &p->context);
@@ -135,6 +136,7 @@ int fork()
 {
 	struct proc *np;
 	struct proc *p = curr_proc();
+	int i;
 	// Allocate process.
 	if ((np = allocproc()) == 0) {
 		panic("allocproc\n");
@@ -144,6 +146,13 @@ int fork()
 		panic("uvmcopy\n");
 	}
 	np->max_page = p->max_page;
+	// Copy file table to new proc
+	for (i = 0; i < FD_BUFFER_SIZE; i++) {
+		if (p->files[i] != NULL) {
+			p->files[i]->ref++;
+			np->files[i] = p->files[i];
+		}
+	}
 	// copy saved user registers.
 	*(np->trapframe) = *(p->trapframe);
 	// Cause fork to return 0 in the child.
@@ -200,7 +209,7 @@ void exit(int code)
 {
 	struct proc *p = curr_proc();
 	p->exit_code = code;
-	debugf("proc %d exit with %d\n", p->pid, code);
+	debugf("proc %d exit with %d", p->pid, code);
 	freeproc(p);
 	if (p->parent != NULL) {
 		// Parent should `wait`
@@ -214,4 +223,19 @@ void exit(int code)
 		}
 	}
 	sched();
+}
+
+int fdalloc(struct file *f)
+{
+	debugf("debugf f = %p, type = %d", f, f->type);
+	struct proc *p = curr_proc();
+	// fd = 0 1 2 is reserved for stdio/stdout/stderr
+	for (int i = 3; i < FD_BUFFER_SIZE; ++i) {
+		if (p->files[i] == NULL) {
+			p->files[i] = f;
+			debugf("debugf fd = %d, f = %p", i, p->files[i]);
+			return i;
+		}
+	}
+	return -1;
 }

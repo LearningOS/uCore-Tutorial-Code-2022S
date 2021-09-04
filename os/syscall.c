@@ -6,34 +6,69 @@
 #include "timer.h"
 #include "trap.h"
 
-uint64 sys_write(int fd, uint64 va, uint len)
+uint64 console_write(uint64 va, uint64 len)
 {
-	debugf("sys_write fd = %d str = %x, len = %d", fd, va, len);
-	if (fd != STDOUT)
-		return -1;
 	struct proc *p = curr_proc();
 	char str[MAX_STR_LEN];
 	int size = copyinstr(p->pagetable, str, va, MIN(len, MAX_STR_LEN));
-	debugf("size = %d", size);
+	tracef("write size = %d", size);
 	for (int i = 0; i < size; ++i) {
 		console_putchar(str[i]);
 	}
-	return size;
+	return len;
 }
 
-uint64 sys_read(int fd, uint64 va, uint64 len)
+uint64 console_read(uint64 va, uint64 len)
 {
-	debugf("sys_read fd = %d str = %x, len = %d", fd, va, len);
-	if (fd != STDIN)
-		return -1;
 	struct proc *p = curr_proc();
 	char str[MAX_STR_LEN];
+	tracef("read size = %d", len);
 	for (int i = 0; i < len; ++i) {
 		int c = consgetc();
 		str[i] = c;
 	}
 	copyout(p->pagetable, va, str, len);
 	return len;
+}
+
+uint64 sys_write(int fd, uint64 va, uint64 len)
+{
+	if (fd == STDOUT || fd == STDERR) {
+		return console_write(va, len);
+	}
+	if (fd <= 2 || fd > FD_BUFFER_SIZE)
+		return -1;
+	struct proc *p = curr_proc();
+	struct file *f = p->files[fd];
+	if (f == NULL) {
+		errorf("invalid fd %d\n", fd);
+		return -1;
+	}
+	if (f->type == FD_PIPE) {
+		debugf("write to pipe at %p", f->pipe);
+		return pipewrite(f->pipe, va, len);
+	}
+	panic("unknown file type %d\n", f->type);
+}
+
+uint64 sys_read(int fd, uint64 va, uint64 len)
+{
+	if (fd == STDIN) {
+		return console_read(va, len);
+	}
+	if (fd <= 2 || fd > FD_BUFFER_SIZE)
+		return -1;
+	struct proc *p = curr_proc();
+	struct file *f = p->files[fd];
+	if (f == NULL) {
+		errorf("invalid fd %d\n", fd);
+		return -1;
+	}
+	if (f->type == FD_PIPE) {
+		debugf("read to pipe at %p", f->pipe);
+		return piperead(f->pipe, va, len);
+	}
+	panic("unknown file type %d fd = %d\n", f->type, fd);
 }
 
 __attribute__((noreturn)) void sys_exit(int code)
@@ -72,7 +107,7 @@ uint64 sys_getppid()
 
 uint64 sys_clone()
 {
-	debugf("fork!\n");
+	debugf("fork!");
 	return fork();
 }
 
@@ -90,6 +125,57 @@ uint64 sys_wait(int pid, uint64 va)
 	struct proc *p = curr_proc();
 	int *code = (int *)useraddr(p->pagetable, va);
 	return wait(pid, code);
+}
+
+uint64 sys_pipe(uint64 fdarray)
+{
+	struct proc *p = curr_proc();
+	uint64 fd0, fd1;
+	struct file *f0, *f1;
+	if (f0 < 0 || f1 < 0) {
+		return -1;
+	}
+	f0 = filealloc();
+	f1 = filealloc();
+	if (pipealloc(f0, f1) < 0)
+		goto err0;
+	fd0 = fdalloc(f0);
+	fd1 = fdalloc(f1);
+	if (fd0 < 0 || fd1 < 0)
+		goto err0;
+	if (copyout(p->pagetable, fdarray, (char *)&fd0, sizeof(fd0)) < 0 ||
+	    copyout(p->pagetable, fdarray + sizeof(uint64), (char *)&fd1,
+		    sizeof(fd1)) < 0) {
+		goto err1;
+	}
+	return 0;
+
+err1:
+	p->files[fd0] = 0;
+	p->files[fd1] = 0;
+err0:
+	fileclose(f0);
+	fileclose(f1);
+	return -1;
+}
+
+uint64 sys_close(int fd)
+{
+	if (fd <= 2 || fd > FD_BUFFER_SIZE)
+		return -1;
+	struct proc *p = curr_proc();
+	struct file *f = p->files[fd];
+	if (f == NULL) {
+		errorf("invalid fd %d", fd);
+		return -1;
+	}
+	if (f->type != FD_PIPE) {
+		panic("fileclose: unsupported file type %d fd = %d\n", f->type,
+		      fd);
+	}
+	fileclose(f);
+	p->files[fd] = 0;
+	return 0;
 }
 
 extern char trap_page[];
@@ -132,6 +218,12 @@ void syscall()
 		break;
 	case SYS_wait4:
 		ret = sys_wait(args[0], args[1]);
+		break;
+	case SYS_pipe2:
+		ret = sys_pipe(args[0]);
+		break;
+	case SYS_close:
+		ret = sys_close(args[0]);
 		break;
 	default:
 		ret = -1;
