@@ -1,0 +1,3 @@
+[submodule "uCore-Tutorial-Tests"]
+	path = user
+	url = https://github.com/DeathWish5/uCore-Tutorial-Tests
