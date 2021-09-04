@@ -10,3 +10,5 @@ link_app.S
 *.d
 *.asm
 *.sym
+nfs/*.img
+nfs/fs

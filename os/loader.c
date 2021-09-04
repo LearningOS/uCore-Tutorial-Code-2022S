@@ -1,60 +1,27 @@
 #include "loader.h"
 #include "defs.h"
+#include "file.h"
 #include "trap.h"
 
-static int app_num;
-static uint64 *app_info_ptr;
-extern char _app_num[], _app_names[], INIT_PROC[];
-char names[MAX_APP_NUM][MAX_STR_LEN];
+extern char INIT_PROC[];
 
-// Get user progs' infomation through pre-defined symbol in `link_app.S`
-void loader_init()
+int bin_loader(struct inode *ip, struct proc *p)
 {
-	char *s;
-	app_info_ptr = (uint64 *)_app_num;
-	app_num = *app_info_ptr;
-	app_info_ptr++;
-	s = _app_names;
-	printf("app list:\n");
-	for (int i = 0; i < app_num; ++i) {
-		int len = strlen(s);
-		strncpy(names[i], (const char *)s, len);
-		s += len + 1;
-		printf("%s\n", names[i]);
-	}
-}
-
-int get_id_by_name(char *name)
-{
-	for (int i = 0; i < app_num; ++i) {
-		if (strncmp(name, names[i], 100) == 0)
-			return i;
-	}
-	warnf("Cannot find such app %s", name);
-	return -1;
-}
-
-int bin_loader(uint64 start, uint64 end, struct proc *p)
-{
-	if (p == NULL || p->state == UNUSED)
-		panic("...");
+	ivalid(ip);
 	void *page;
-	uint64 pa_start = PGROUNDDOWN(start);
-	uint64 pa_end = PGROUNDUP(end);
-	uint64 length = pa_end - pa_start;
+	uint64 length = ip->size;
 	uint64 va_start = BASE_ADDRESS;
-	uint64 va_end = BASE_ADDRESS + length;
-	for (uint64 va = va_start, pa = pa_start; pa < pa_end;
-	     va += PGSIZE, pa += PGSIZE) {
+	uint64 va_end = PGROUNDUP(BASE_ADDRESS + length);
+	for (uint64 va = va_start, off = 0; va < va_end;
+	     va += PGSIZE, off += PAGE_SIZE) {
 		page = kalloc();
 		if (page == 0) {
 			panic("...");
 		}
-		memmove(page, (const void *)pa, PGSIZE);
-		if (pa < start) {
-			memset(page, 0, start - va);
-		} else if (pa + PAGE_SIZE > end) {
-			memset(page + (end - pa), 0, PAGE_SIZE - (end - pa));
+		readi(ip, 0, (uint64)page, off, PAGE_SIZE);
+		if (off + PAGE_SIZE > length) {
+			memset(page + (length - off), 0,
+			       PAGE_SIZE - (length - off));
 		}
 		if (mappages(p->pagetable, va, PGSIZE, (uint64)page,
 			     PTE_U | PTE_R | PTE_W | PTE_X) != 0)
@@ -80,22 +47,22 @@ int bin_loader(uint64 start, uint64 end, struct proc *p)
 	return 0;
 }
 
-int loader(int app_id, struct proc *p)
-{
-	return bin_loader(app_info_ptr[app_id], app_info_ptr[app_id + 1], p);
-}
-
 // load all apps and init the corresponding `proc` structure.
 int load_init_app()
 {
-	int id = get_id_by_name(INIT_PROC);
-	if (id < 0)
-		panic("Cannpt find INIT_PROC %s", INIT_PROC);
+	struct inode *ip;
 	struct proc *p = allocproc();
-	if (p == NULL) {
-		panic("allocproc\n");
+	init_stdio(p);
+	if ((ip = namei(INIT_PROC)) == 0) {
+		errorf("invalid init proc name\n");
+		return -1;
 	}
-	infof("load init proc %s", INIT_PROC);
-	loader(id, p);
+	debugf("load init app %s", INIT_PROC);
+	bin_loader(ip, p);
+	iput(ip);
+	char *argv[2];
+	argv[0] = INIT_PROC;
+	argv[1] = NULL;
+	p->trapframe->a0 = push_argv(p, argv);
 	return 0;
 }

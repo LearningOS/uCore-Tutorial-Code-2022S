@@ -54,10 +54,12 @@ void scheduler() __attribute__((noreturn));
 void sched();
 void yield();
 int fork();
-int exec(char *);
+int exec(char *, char **);
 int wait(int, int *);
 struct proc *allocproc();
 int fdalloc(struct file *);
+int init_stdio(struct proc *);
+int push_argv(struct proc *, char **);
 // swtch.S
 void swtch(struct context *, struct context *);
 
