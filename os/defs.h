@@ -4,6 +4,7 @@
 #include "const.h"
 #include "log.h"
 #include "printf.h"
+#include "proc.h"
 #include "riscv.h"
 #include "sbi.h"
 #include "string.h"
@@ -14,4 +15,4 @@
 #define MIN(a, b) (a < b ? a : b)
 #define MAX(a, b) (a > b ? a : b)
 
-#endif  // DEF_H
+#endif // DEF_H

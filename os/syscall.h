@@ -3,4 +3,4 @@
 
 void syscall();
 
-#endif  // SYSCALL_H
+#endif // SYSCALL_H

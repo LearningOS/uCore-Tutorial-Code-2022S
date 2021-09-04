@@ -4,4 +4,4 @@
 void consputc(int);
 void console_init();
 
-#endif  // CONSOLE_H
+#endif // CONSOLE_H
