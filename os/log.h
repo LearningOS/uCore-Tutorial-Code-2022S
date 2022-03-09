@@ -3,7 +3,7 @@
 
 extern void printf(char *, ...);
 extern int threadid();
-extern void shutdown();
+extern void dummy(int, ...);
 
 #if defined(LOG_LEVEL_ERROR)
 
@@ -61,7 +61,7 @@ enum LOG_COLOR {
 		       ##__VA_ARGS__);                                         \
 	} while (0)
 #else
-#define errorf(fmt, ...)
+#define errorf(fmt, ...) dummy(0, ##__VA_ARGS__)
 #endif // USE_LOG_ERROR
 
 #if defined(USE_LOG_WARN)
@@ -72,7 +72,7 @@ enum LOG_COLOR {
 		       ##__VA_ARGS__);                                         \
 	} while (0)
 #else
-#define warnf(fmt, ...)
+#define warnf(fmt, ...) dummy(0, ##__VA_ARGS__)
 #endif // USE_LOG_WARN
 
 #if defined(USE_LOG_INFO)
@@ -83,7 +83,7 @@ enum LOG_COLOR {
 		       ##__VA_ARGS__);                                         \
 	} while (0)
 #else
-#define infof(fmt, ...)
+#define infof(fmt, ...) dummy(0, ##__VA_ARGS__)
 #endif // USE_LOG_INFO
 
 #if defined(USE_LOG_DEBUG)
@@ -94,7 +94,7 @@ enum LOG_COLOR {
 		       ##__VA_ARGS__);                                         \
 	} while (0)
 #else
-#define debugf(fmt, ...)
+#define debugf(fmt, ...) dummy(0, ##__VA_ARGS__)
 #endif // USE_LOG_DEBUG
 
 #if defined(USE_LOG_TRACE)
@@ -105,7 +105,7 @@ enum LOG_COLOR {
 		       ##__VA_ARGS__);                                         \
 	} while (0)
 #else
-#define tracef(fmt, ...)
+#define tracef(fmt, ...) dummy(0, ##__VA_ARGS__)
 #endif // USE_LOG_TRACE
 
 #define panic(fmt, ...)                                                        \
@@ -113,8 +113,6 @@ enum LOG_COLOR {
 		int tid = threadid();                                          \
 		printf("\x1b[%dm[%s %d] %s:%d: " fmt "\x1b[0m\n", RED,         \
 		       "PANIC", tid, __FILE__, __LINE__, ##__VA_ARGS__);       \
-		shutdown();                                                    \
-                                                                               \
 	} while (0)
 
 #endif //! LOG_H

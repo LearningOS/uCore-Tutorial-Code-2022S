@@ -4,6 +4,7 @@ all: build_kernel
 LOG ?= error
 
 K = os
+U = user
 
 TOOLPREFIX = riscv64-unknown-elf-
 CC = $(TOOLPREFIX)gcc
@@ -14,8 +15,6 @@ OBJDUMP = $(TOOLPREFIX)objdump
 PY = python3
 GDB = $(TOOLPREFIX)gdb
 CP = cp
-MKDIR_P = mkdir -p
-
 BUILDDIR = build
 C_SRCS = $(wildcard $K/*.c)
 AS_SRCS = $(wildcard $K/*.S)
@@ -24,6 +23,10 @@ AS_OBJS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(AS_SRCS))))
 OBJS = $(C_OBJS) $(AS_OBJS)
 
 HEADER_DEP = $(addsuffix .d, $(basename $(C_OBJS)))
+
+ifeq (,$(findstring link_app.o,$(OBJS)))
+	AS_OBJS += $(BUILDDIR)/$K/link_app.o
+endif
 
 -include $(HEADER_DEP)
 
@@ -70,16 +73,23 @@ $(HEADER_DEP): $(BUILDDIR)/$K/%.d : $K/%.c
         sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
         rm -f $@.$$$$
 
+os/link_app.o: $K/link_app.S
+os/link_app.S: scripts/pack.py
+	@$(PY) scripts/pack.py
+os/kernel_app.ld: scripts/kernelld.py
+	@$(PY) scripts/kernelld.py
+
 build: build/kernel
 
-build/kernel: $(OBJS)
-	$(LD) $(LDFLAGS) -T os/kernel.ld -o $(BUILDDIR)/kernel $(OBJS)
+build/kernel: $(OBJS) os/kernel_app.ld
+	$(LD) $(LDFLAGS) -T os/kernel_app.ld -o $(BUILDDIR)/kernel $(OBJS)
 	$(OBJDUMP) -S $(BUILDDIR)/kernel > $(BUILDDIR)/kernel.asm
 	$(OBJDUMP) -t $(BUILDDIR)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(BUILDDIR)/kernel.sym
 	@echo 'Build kernel done'
 
 clean:
-	rm -rf $(BUILDDIR)
+	rm -rf $(BUILDDIR) os/kernel_app.ld os/link_app.S
+	make -C $(U) clean
 
 # BOARD
 BOARD		?= qemu
@@ -105,3 +115,11 @@ debug: build/kernel .gdbinit
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB) &
 	sleep 1
 	$(GDB)
+
+CHAPTER ?= $(shell git rev-parse --abbrev-ref HEAD | grep -oP 'ch\K[0-9]')
+
+user:
+	make -C $(U) CHAPTER=$(CHAPTER) BASE=$(BASE)
+
+test: user run
+
