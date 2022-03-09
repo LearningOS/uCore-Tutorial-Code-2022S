@@ -1,8 +1,8 @@
 #ifndef KALLOC_H
 #define KALLOC_H
 
-void *kalloc(void);
+void *kalloc();
 void kfree(void *);
-void kinit(void);
+void kinit();
 
 #endif // KALLOC_H

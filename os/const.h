@@ -31,6 +31,8 @@ enum {
 
 // memory layout end
 
+#define MAX_APP_NUM (32)
 #define MAX_STR_LEN (200)
+#define IDLE_PID (0)
 
 #endif // CONST_H
