@@ -1,0 +1,12 @@
+.DS_Store
+.vscode
+.idea
+build
+target
+/user
+link_app.S
+kernel_app.ld
+*.o
+*.d
+*.asm
+*.sym
