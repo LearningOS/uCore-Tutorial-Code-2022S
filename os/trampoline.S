@@ -60,7 +60,7 @@ uservec:
         sd t5, 272(a0)
         sd t6, 280(a0)
 
-	# save the user a0 in p->trapframe->a0
+	    # save the user a0 in p->trapframe->a0
         csrr t0, sscratch
         sd t0, 112(a0)
 
@@ -84,8 +84,8 @@ userret:
         # a1: user page table, for satp.
 
         # switch to the user page table.
-        # csrw satp, a1
-        # sfence.vma zero, zero
+        csrw satp, a1
+        sfence.vma zero, zero
 
         # put the saved user a0 in sscratch, so we
         # can swap it with our a0 (TRAPFRAME) in the last step.

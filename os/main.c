@@ -1,12 +1,8 @@
 #include "console.h"
 #include "defs.h"
 #include "loader.h"
+#include "timer.h"
 #include "trap.h"
-
-int threadid()
-{
-	return 0;
-}
 
 void clean_bss()
 {
@@ -18,8 +14,11 @@ void clean_bss()
 void main()
 {
 	clean_bss();
-	printf("hello wrold!\n");
-	trap_init();
+	proc_init();
 	loader_init();
-	run_next_app();
+	trap_init();
+	timer_init();
+	run_all_app();
+	infof("start scheduler!");
+	scheduler();
 }

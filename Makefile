@@ -1,10 +1,7 @@
 .PHONY: clean build user
 all: build_kernel
 
-LOG ?= error
-
 K = os
-U = user
 
 TOOLPREFIX = riscv64-unknown-elf-
 CC = $(TOOLPREFIX)gcc
@@ -36,6 +33,9 @@ CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I$K
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+
+
+LOG ?= error
 
 ifeq ($(LOG), error)
 CFLAGS += -D LOG_LEVEL_ERROR
@@ -89,7 +89,7 @@ build/kernel: $(OBJS) os/kernel_app.ld
 
 clean:
 	rm -rf $(BUILDDIR) os/kernel_app.ld os/link_app.S
-	make -C $(U) clean
+	make -C user clean
 
 # BOARD
 BOARD		?= qemu
@@ -118,8 +118,10 @@ debug: build/kernel .gdbinit
 
 CHAPTER ?= $(shell git rev-parse --abbrev-ref HEAD | grep -oP 'ch\K[0-9]')
 
+BASE ?= 0
+
 user:
-	make -C $(U) CHAPTER=$(CHAPTER) BASE=$(BASE)
+	make -C user CHAPTER=$(CHAPTER) BASE=$(BASE)
 
 test: user run
 

@@ -69,6 +69,6 @@ enum Interrupt {
 };
 
 void trap_init();
-void usertrapret(struct trapframe *trapframe, uint64 kstack);
+void usertrapret();
 
 #endif // TRAP_H

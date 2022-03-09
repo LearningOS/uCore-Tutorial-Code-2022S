@@ -4,6 +4,7 @@
 #include "const.h"
 #include "log.h"
 #include "printf.h"
+#include "proc.h"
 #include "riscv.h"
 #include "sbi.h"
 #include "string.h"

@@ -4,6 +4,7 @@
 extern void printf(char *, ...);
 extern int threadid();
 extern void dummy(int, ...);
+extern void shutdown();
 
 #if defined(LOG_LEVEL_ERROR)
 
@@ -113,6 +114,7 @@ enum LOG_COLOR {
 		int tid = threadid();                                          \
 		printf("\x1b[%dm[%s %d] %s:%d: " fmt "\x1b[0m\n", RED,         \
 		       "PANIC", tid, __FILE__, __LINE__, ##__VA_ARGS__);       \
+		shutdown();                                                    \
 	} while (0)
 
 #endif //! LOG_H
