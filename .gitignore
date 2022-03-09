@@ -10,3 +10,5 @@ kernel_app.ld
 *.d
 *.asm
 *.sym
+nfs/*.img
+nfs/fs

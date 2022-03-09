@@ -3,12 +3,6 @@
 
 #define PAGE_SIZE (0x1000)
 
-enum {
-	STDIN = 0,
-	STDOUT = 1,
-	STDERR = 2,
-};
-
 // memory layout
 
 // the kernel expects there to be RAM
@@ -29,10 +23,9 @@ enum {
 #define TRAMPOLINE (USER_TOP - PGSIZE)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
 
-// memory layout end
-
 #define MAX_APP_NUM (32)
 #define MAX_STR_LEN (200)
 #define IDLE_PID (0)
+#define MAX_ARG_NUM (32) // max exec arguments
 
 #endif // CONST_H

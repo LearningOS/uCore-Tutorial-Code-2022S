@@ -17,6 +17,11 @@ int threadid()
 	return curr_proc()->pid;
 }
 
+int cpuid()
+{
+	return 0;
+}
+
 struct proc *curr_proc()
 {
 	return current_proc;
@@ -71,6 +76,17 @@ found:
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + KSTACK_SIZE;
 	return p;
+}
+
+int init_stdio(struct proc *p)
+{
+	for (int i = 0; i < 3; i++) {
+		if (p->files[i] != NULL) {
+			return -1;
+		}
+		p->files[i] = stdio_init(i);
+	}
+	return 0;
 }
 
 // Scheduler never returns.  It loops, doing:
@@ -134,10 +150,8 @@ void freeproc(struct proc *p)
 	if (p->pagetable)
 		freepagetable(p->pagetable, p->max_page);
 	p->pagetable = 0;
-	for (int i = 3; i < FD_BUFFER_SIZE; i++) {
+	for (int i = 0; i > FD_BUFFER_SIZE; i++) {
 		if (p->files[i] != NULL) {
-			if (p->files[i]->type != FD_PIPE)
-				panic("invalid file type");
 			fileclose(p->files[i]);
 		}
 	}
@@ -161,6 +175,7 @@ int fork()
 	// Copy file table to new proc
 	for (i = 0; i < FD_BUFFER_SIZE; i++) {
 		if (p->files[i] != NULL) {
+			// TODO: f->type == STDIO ?
 			p->files[i]->ref++;
 			np->files[i] = p->files[i];
 		}
@@ -174,16 +189,55 @@ int fork()
 	return np->pid;
 }
 
-int exec(char *name)
+int push_argv(struct proc *p, char **argv)
 {
-	int id = get_id_by_name(name);
-	if (id < 0)
-		return -1;
+	uint64 argc, ustack[MAX_ARG_NUM + 1];
+	uint64 sp = p->ustack + USTACK_SIZE, spb = p->ustack;
+	// Push argument strings, prepare rest of stack in ustack.
+	for (argc = 0; argv[argc]; argc++) {
+		if (argc >= MAX_ARG_NUM)
+			panic("...");
+		sp -= strlen(argv[argc]) + 1;
+		sp -= sp % 16; // riscv sp must be 16-byte aligned
+		if (sp < spb) {
+			panic("...");
+		}
+		if (copyout(p->pagetable, sp, argv[argc],
+			    strlen(argv[argc]) + 1) < 0) {
+			panic("...");
+		}
+		ustack[argc] = sp;
+	}
+	ustack[argc] = 0;
+	// push the array of argv[] pointers.
+	sp -= (argc + 1) * sizeof(uint64);
+	sp -= sp % 16;
+	if (sp < spb) {
+		panic("...");
+	}
+	if (copyout(p->pagetable, sp, (char *)ustack,
+		    (argc + 1) * sizeof(uint64)) < 0) {
+		panic("...");
+	}
+	p->trapframe->a1 = sp;
+	p->trapframe->sp = sp;
+	// clear files ?
+	return argc; // this ends up in a0, the first argument to main(argc, argv)
+}
+
+int exec(char *path, char **argv)
+{
+	infof("exec : %s\n", path);
+	struct inode *ip;
 	struct proc *p = curr_proc();
+	if ((ip = namei(path)) == 0) {
+		errorf("invalid file name %s\n", path);
+		return -1;
+	}
 	uvmunmap(p->pagetable, 0, p->max_page, 1);
-	p->max_page = 0;
-	loader(id, p);
-	return 0;
+	bin_loader(ip, p);
+	iput(ip);
+	return push_argv(p, argv);
 }
 
 int wait(int pid, int *code)
@@ -241,8 +295,7 @@ int fdalloc(struct file *f)
 {
 	debugf("debugf f = %p, type = %d", f, f->type);
 	struct proc *p = curr_proc();
-	// fd = 0 1 2 is reserved for stdio/stdout/stderr
-	for (int i = 3; i < FD_BUFFER_SIZE; ++i) {
+	for (int i = 0; i < FD_BUFFER_SIZE; ++i) {
 		if (p->files[i] == NULL) {
 			p->files[i] = f;
 			debugf("debugf fd = %d, f = %p", i, p->files[i]);
