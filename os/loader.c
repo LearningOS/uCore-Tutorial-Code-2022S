@@ -95,8 +95,7 @@ int load_init_app()
 	if (p == NULL) {
 		panic("allocproc\n");
 	}
-	debugf("load init proc %s", INIT_PROC);
+	infof("load init proc %s", INIT_PROC);
 	loader(id, p);
-	add_task(p);
 	return 0;
 }

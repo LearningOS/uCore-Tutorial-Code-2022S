@@ -115,6 +115,7 @@ enum LOG_COLOR {
 		printf("\x1b[%dm[%s %d] %s:%d: " fmt "\x1b[0m\n", RED,         \
 		       "PANIC", tid, __FILE__, __LINE__, ##__VA_ARGS__);       \
 		shutdown();                                                    \
+		__builtin_unreachable();                                       \
 	} while (0)
 
 #endif //! LOG_H

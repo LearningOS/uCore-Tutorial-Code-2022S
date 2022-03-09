@@ -3,7 +3,6 @@
 #include "loader.h"
 #include "trap.h"
 #include "vm.h"
-#include "queue.h"
 
 struct proc pool[NPROC];
 __attribute__((aligned(16))) char kstack[NPROC][PAGE_SIZE];
@@ -12,7 +11,6 @@ __attribute__((aligned(4096))) char trapframe[NPROC][TRAP_PAGE_SIZE];
 extern char boot_stack_top[];
 struct proc *current_proc;
 struct proc idle;
-struct queue task_queue;
 
 int threadid()
 {
@@ -36,30 +34,12 @@ void proc_init()
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = IDLE_PID;
 	current_proc = &idle;
-	init_queue(&task_queue);
 }
 
 int allocpid()
 {
 	static int PID = 1;
 	return PID++;
-}
-
-struct proc *fetch_task()
-{
-	int index = pop_queue(&task_queue);
-	if (index < 0) {
-		debugf("No task to fetch\n");
-		return NULL;
-	}
-	debugf("fetch task %d(pid=%d) to task queue\n", index, pool[index].pid);
-	return pool + index;
-}
-
-void add_task(struct proc *p)
-{
-	push_queue(&task_queue, p - pool);
-	debugf("add task %d(pid=%d) to task queue\n", p - pool, p->pid);
 }
 
 // Look in the process table for an UNUSED proc.
@@ -87,6 +67,7 @@ found:
 	memset(&p->context, 0, sizeof(p->context));
 	memset((void *)p->kstack, 0, KSTACK_SIZE);
 	memset((void *)p->trapframe, 0, TRAP_PAGE_SIZE);
+	memset((void *)p->files, 0, sizeof(struct file *) * FD_BUFFER_SIZE);
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + KSTACK_SIZE;
 	return p;
@@ -101,11 +82,11 @@ void scheduler()
 {
 	struct proc *p;
 	for (;;) {
-		/*int has_proc = 0;
+		int has_proc = 0;
 		for (p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
 				has_proc = 1;
-				tracef("swtich to proc %d", p - pool);
+				debugf("swtich to proc %d", p - pool);
 				p->state = RUNNING;
 				current_proc = p;
 				swtch(&idle.context, &p->context);
@@ -113,15 +94,7 @@ void scheduler()
 		}
 		if(has_proc == 0) {
 			panic("all app are over!\n");
-		}*/
-		p = fetch_task();
-		if (p == NULL) {
-			panic("all app are over!\n");
 		}
-		tracef("swtich to proc %d", p - pool);
-		p->state = RUNNING;
-		current_proc = p;
-		swtch(&idle.context, &p->context);
 	}
 }
 
@@ -144,7 +117,6 @@ void sched()
 void yield()
 {
 	current_proc->state = RUNNABLE;
-	add_task(current_proc);
 	sched();
 }
 
@@ -162,6 +134,13 @@ void freeproc(struct proc *p)
 	if (p->pagetable)
 		freepagetable(p->pagetable, p->max_page);
 	p->pagetable = 0;
+	for (int i = 3; i < FD_BUFFER_SIZE; i++) {
+		if (p->files[i] != NULL) {
+			if (p->files[i]->type != FD_PIPE)
+				panic("invalid file type");
+			fileclose(p->files[i]);
+		}
+	}
 	p->state = UNUSED;
 }
 
@@ -169,6 +148,7 @@ int fork()
 {
 	struct proc *np;
 	struct proc *p = curr_proc();
+	int i;
 	// Allocate process.
 	if ((np = allocproc()) == 0) {
 		panic("allocproc\n");
@@ -178,13 +158,19 @@ int fork()
 		panic("uvmcopy\n");
 	}
 	np->max_page = p->max_page;
+	// Copy file table to new proc
+	for (i = 0; i < FD_BUFFER_SIZE; i++) {
+		if (p->files[i] != NULL) {
+			p->files[i]->ref++;
+			np->files[i] = p->files[i];
+		}
+	}
 	// copy saved user registers.
 	*(np->trapframe) = *(p->trapframe);
 	// Cause fork to return 0 in the child.
 	np->trapframe->a0 = 0;
 	np->parent = p;
 	np->state = RUNNABLE;
-	add_task(np);
 	return np->pid;
 }
 
@@ -226,7 +212,6 @@ int wait(int pid, int *code)
 			return -1;
 		}
 		p->state = RUNNABLE;
-		add_task(p);
 		sched();
 	}
 }
@@ -236,7 +221,7 @@ void exit(int code)
 {
 	struct proc *p = curr_proc();
 	p->exit_code = code;
-	debugf("proc %d exit with %d\n", p->pid, code);
+	debugf("proc %d exit with %d", p->pid, code);
 	freeproc(p);
 	if (p->parent != NULL) {
 		// Parent should `wait`
@@ -250,4 +235,19 @@ void exit(int code)
 		}
 	}
 	sched();
+}
+
+int fdalloc(struct file *f)
+{
+	debugf("debugf f = %p, type = %d", f, f->type);
+	struct proc *p = curr_proc();
+	// fd = 0 1 2 is reserved for stdio/stdout/stderr
+	for (int i = 3; i < FD_BUFFER_SIZE; ++i) {
+		if (p->files[i] == NULL) {
+			p->files[i] = f;
+			debugf("debugf fd = %d, f = %p", i, p->files[i]);
+			return i;
+		}
+	}
+	return -1;
 }
