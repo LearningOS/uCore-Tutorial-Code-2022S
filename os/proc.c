@@ -31,6 +31,9 @@ void proc_init(void)
 		p->kstack = (uint64)kstack[p - pool];
 		p->ustack = (uint64)ustack[p - pool];
 		p->trapframe = (struct trapframe *)trapframe[p - pool];
+		/*
+		* LAB1: you may need to initialize your new fields of proc here
+		*/
 	}
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = 0;
@@ -78,6 +81,9 @@ void scheduler(void)
 	for (;;) {
 		for (p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
+				/*
+				* LAB1: you may need to init proc start time here
+				*/
 				p->state = RUNNING;
 				current_proc = p;
 				swtch(&idle.context, &p->context);
