@@ -32,7 +32,7 @@ uint64 sys_sched_yield()
 	return 0;
 }
 
-uint64 sys_gettimeofday(TimeVal *val, int _tz)
+uint64 sys_gettimeofday(TimeVal *val, int _tz) // TODO: implement sys_gettimeofday in pagetable. (VA to PA)
 {
 	// YOUR CODE
 	val->sec = 0;
@@ -45,6 +45,10 @@ uint64 sys_gettimeofday(TimeVal *val, int _tz)
 	// val->usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
 	return 0;
 }
+
+// TODO: add support for mmap and munmap syscall.
+// hint: read through docstrings in vm.c. Watching CH4 video may also help.
+// Note the return value and PTE flags (especially U,X,W,R)
 
 extern char trap_page[];
 
