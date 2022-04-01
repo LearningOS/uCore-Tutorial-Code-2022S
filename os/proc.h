@@ -38,7 +38,14 @@ struct proc {
 	struct trapframe *trapframe; // data page for trampoline.S
 	struct context context; // swtch() here to run process
 	uint64 max_page;
+	/*
+	* LAB1: you may need to add some new fields here
+	*/
 };
+
+/*
+* LAB1: you may need to define struct for TaskInfo here
+*/
 
 struct proc *curr_proc();
 void exit(int);

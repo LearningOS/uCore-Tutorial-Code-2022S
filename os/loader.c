@@ -67,6 +67,9 @@ int run_all_app()
 		tracef("load app %d", i);
 		bin_loader(app_info_ptr[i], app_info_ptr[i + 1], p);
 		p->state = RUNNABLE;
+		/*
+		* LAB1: you may need to initialize your new fields of proc here
+		*/
 	}
 	return 0;
 }
