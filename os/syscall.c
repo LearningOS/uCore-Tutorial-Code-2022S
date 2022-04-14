@@ -92,6 +92,18 @@ uint64 sys_wait(int pid, uint64 va)
 	return wait(pid, code);
 }
 
+uint64 sys_spawn(uint64 va)
+{
+	// TODO: your job is to complete the sys call
+	return -1;
+}
+
+uint64 sys_set_priority(long long prio){
+    // TODO: your job is to complete the sys call
+    return -1;
+}
+
+
 extern char trap_page[];
 
 void syscall()
@@ -132,6 +144,9 @@ void syscall()
 		break;
 	case SYS_wait4:
 		ret = sys_wait(args[0], args[1]);
+		break;
+	case SYS_spawn:
+		ret = sys_spawn(args[0]);
 		break;
 	default:
 		ret = -1;
