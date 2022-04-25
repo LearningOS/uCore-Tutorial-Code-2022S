@@ -377,6 +377,7 @@ struct inode *dirlookup(struct inode *dp, char *name, uint *poff)
 	return 0;
 }
 
+//Show the filenames of all files in the directory
 int dirls(struct inode *dp)
 {
 	uint64 off, count;
@@ -423,6 +424,7 @@ int dirlink(struct inode *dp, char *name, uint inum)
 	return 0;
 }
 
+//Return the inode of the root directory
 struct inode *root_dir()
 {
 	struct inode *r = iget(ROOTDEV, ROOTINO);
@@ -430,6 +432,7 @@ struct inode *root_dir()
 	return r;
 }
 
+//Find the corresponding inode according to the path
 struct inode *namei(char *path)
 {
 	int skip = 0;
