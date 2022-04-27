@@ -133,6 +133,7 @@ int fileopen(char *path, uint64 omode)
 	return fd;
 }
 
+// Write data to inode.
 uint64 inodewrite(struct file *f, uint64 va, uint64 len)
 {
 	int r;
@@ -142,6 +143,7 @@ uint64 inodewrite(struct file *f, uint64 va, uint64 len)
 	return r;
 }
 
+//Read data from inode.
 uint64 inoderead(struct file *f, uint64 va, uint64 len)
 {
 	int r;

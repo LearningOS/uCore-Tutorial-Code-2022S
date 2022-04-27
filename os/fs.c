@@ -92,6 +92,7 @@ static void bfree(int dev, uint b)
 	brelse(bp);
 }
 
+//The inode table in memory 
 struct {
 	struct inode inode[NINODE];
 } itable;

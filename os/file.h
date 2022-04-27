@@ -8,7 +8,7 @@
 #define PIPESIZE (512)
 #define FILEPOOLSIZE (NPROC * FD_BUFFER_SIZE)
 
-// in-memory copy of an inode
+// in-memory copy of an inode,it can be used to quickly locate file entities on disk
 struct inode {
 	uint dev; // Device number
 	uint inum; // Inode number
@@ -19,16 +19,17 @@ struct inode {
 	uint addrs[NDIRECT + 1];
 };
 
-// file.h
+// Defines a file in memory that provides information about the current use of the file and the corresponding inode location
 struct file {
 	enum { FD_NONE = 0,FD_INODE, FD_STDIO } type;
 	int ref; // reference count
-	char readable;
+	char readable; 
 	char writable;
 	struct inode *ip; // FD_INODE
 	uint off;
 };
 
+//A few specific fd
 enum {
 	STDIN = 0,
 	STDOUT = 1,
