@@ -43,7 +43,7 @@ struct proc {
 	uint64 max_page;
 	struct proc *parent; // Parent process
 	uint64 exit_code;
-	struct file *files[FD_BUFFER_SIZE];
+	struct file *files[FD_BUFFER_SIZE]; //File descriptor table, using to record the files opened by the process
 };
 
 int cpuid();
