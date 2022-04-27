@@ -19,8 +19,9 @@ struct inode {
 	uint addrs[NDIRECT + 1];
 };
 
+//a struct for pipe
 struct pipe {
-	char data[PIPESIZE];
+	char data[PIPESIZE]; 
 	uint nread; // number of bytes read
 	uint nwrite; // number of bytes written
 	int readopen; // read fd is still open

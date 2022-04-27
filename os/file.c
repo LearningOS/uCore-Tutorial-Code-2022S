@@ -4,8 +4,10 @@
 #include "fs.h"
 #include "proc.h"
 
+//This is a system-level open file table that holds open files of all process. 
 struct file filepool[FILEPOOLSIZE];
 
+//Abstract the stdio into a file.
 struct file *stdio_init(int fd)
 {
 	struct file *f = filealloc();
@@ -16,6 +18,7 @@ struct file *stdio_init(int fd)
 	return f;
 }
 
+//The operation performed on the system-level open file table entry after some process closes a file.
 void fileclose(struct file *f)
 {
 	if (f->ref < 1)
@@ -44,6 +47,7 @@ void fileclose(struct file *f)
 	f->type = FD_NONE;
 }
 
+//Add a new system-level table entry for the open file table
 struct file *filealloc()
 {
 	for (int i = 0; i < FILEPOOLSIZE; ++i) {
@@ -55,11 +59,17 @@ struct file *filealloc()
 	return 0;
 }
 
+//Show names of all files in the root_dir.
 int show_all_files()
 {
 	return dirls(root_dir());
 }
 
+//Create a new empty file based on path and type and return its inode;
+
+//if the file under the path exists, return its inode;
+
+//returns 0 if the type of file to be created is not T_file
 static struct inode *create(char *path, short type)
 {
 	struct inode *ip, *dp;
@@ -88,6 +98,11 @@ static struct inode *create(char *path, short type)
 	return ip;
 }
 
+//A process creates or opens a file according to its path, returning the file descriptor of the created or opened file.
+
+//If omode is O_CREATE, create a new file
+
+//if omode if the others,open a created file.
 int fileopen(char *path, uint64 omode)
 {
 	int fd;
@@ -124,6 +139,7 @@ int fileopen(char *path, uint64 omode)
 	return fd;
 }
 
+// Write data to inode.
 uint64 inodewrite(struct file *f, uint64 va, uint64 len)
 {
 	int r;
@@ -133,6 +149,7 @@ uint64 inodewrite(struct file *f, uint64 va, uint64 len)
 	return r;
 }
 
+//Read data from inode.
 uint64 inoderead(struct file *f, uint64 va, uint64 len)
 {
 	int r;
