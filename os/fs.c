@@ -92,7 +92,7 @@ static void bfree(int dev, uint b)
 	brelse(bp);
 }
 
-//The inode table in memory 
+//The inode table in memory
 struct {
 	struct inode inode[NINODE];
 } itable;
@@ -136,6 +136,7 @@ void iupdate(struct inode *ip)
 	dip = (struct dinode *)bp->data + ip->inum % IPB;
 	dip->type = ip->type;
 	dip->size = ip->size;
+	// LAB4: you may need to update link count here
 	memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
 	bwrite(bp);
 	brelse(bp);
@@ -188,6 +189,7 @@ void ivalid(struct inode *ip)
 		dip = (struct dinode *)bp->data + ip->inum % IPB;
 		ip->type = dip->type;
 		ip->size = dip->size;
+		// LAB4: You may need to get lint count here
 		memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
 		brelse(bp);
 		ip->valid = 1;
@@ -205,6 +207,7 @@ void ivalid(struct inode *ip)
 // case it has to free the inode.
 void iput(struct inode *ip)
 {
+	// LAB4: Unmark the condition and change link count variable name (nlink) if needed
 	if (ip->ref == 1 && ip->valid && 0 /*&& ip->nlink == 0*/) {
 		// inode has no links and no other references: truncate and free.
 		itrunc(ip);
@@ -424,6 +427,8 @@ int dirlink(struct inode *dp, char *name, uint inum)
 		panic("dirlink");
 	return 0;
 }
+
+// LAB4: You may want to add dirunlink here
 
 //Return the inode of the root directory
 struct inode *root_dir()

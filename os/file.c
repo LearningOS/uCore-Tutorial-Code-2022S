@@ -4,8 +4,8 @@
 #include "fs.h"
 #include "proc.h"
 
-//This is a system-level open file table that holds open files of all process. 
-struct file filepool[FILEPOOLSIZE];   
+//This is a system-level open file table that holds open files of all process.
+struct file filepool[FILEPOOLSIZE];
 
 //Abstract the stdio into a file.
 struct file *stdio_init(int fd)
@@ -23,7 +23,7 @@ void fileclose(struct file *f)
 {
 	if (f->ref < 1)
 		panic("fileclose");
-	if (--f->ref > 0) {    
+	if (--f->ref > 0) {
 		return;
 	}
 	switch (f->type) {
@@ -68,11 +68,11 @@ int show_all_files()
 static struct inode *create(char *path, short type)
 {
 	struct inode *ip, *dp;
-	dp = root_dir();     //Remember that the root_inode is open in this step,so it needs closing then.
+	dp = root_dir(); //Remember that the root_inode is open in this step,so it needs closing then.
 	ivalid(dp);
 	if ((ip = dirlookup(dp, path, 0)) != 0) {
 		warnf("create a exist file\n");
-		iput(dp);       //Close the root_inode
+		iput(dp); //Close the root_inode
 		ivalid(ip);
 		if (type == T_FILE && ip->type == T_FILE)
 			return ip;
@@ -114,8 +114,10 @@ int fileopen(char *path, uint64 omode)
 	}
 	if (ip->type != T_FILE)
 		panic("unsupported file inode type\n");
-	if ((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0) { //Assign a system-level table entry to a newly created or opened file 
-														   //and then create a file descriptor that points to it
+	if ((f = filealloc()) == 0 ||
+	    (fd = fdalloc(f)) <
+		    0) { //Assign a system-level table entry to a newly created or opened file
+		//and then create a file descriptor that points to it
 		if (f)
 			fileclose(f);
 		iput(ip);
