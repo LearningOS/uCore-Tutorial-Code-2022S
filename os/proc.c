@@ -3,6 +3,7 @@
 #include "loader.h"
 #include "trap.h"
 #include "vm.h"
+#include "queue.h"
 
 struct proc pool[NPROC];
 __attribute__((aligned(16))) char kstack[NPROC][PAGE_SIZE];
@@ -11,6 +12,7 @@ __attribute__((aligned(4096))) char trapframe[NPROC][TRAP_PAGE_SIZE];
 extern char boot_stack_top[];
 struct proc *current_proc;
 struct proc idle;
+struct queue task_queue;
 
 int threadid()
 {
@@ -39,12 +41,31 @@ void proc_init()
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = IDLE_PID;
 	current_proc = &idle;
+	init_queue(&task_queue);
 }
 
 int allocpid()
 {
 	static int PID = 1;
 	return PID++;
+}
+
+struct proc *fetch_task()
+{
+	int index = pop_queue(&task_queue);
+	if (index < 0) {
+		debugf("No task to fetch\n");
+		return NULL;
+	}
+	debugf("fetch task %d(pid=%d) from task queue\n", index,
+	       pool[index].pid);
+	return pool + index;
+}
+
+void add_task(struct proc *p)
+{
+	push_queue(&task_queue, p - pool);
+	debugf("add task %d(pid=%d) to task queue\n", p - pool, p->pid);
 }
 
 // Look in the process table for an UNUSED proc.
@@ -98,11 +119,11 @@ void scheduler()
 {
 	struct proc *p;
 	for (;;) {
-		int has_proc = 0;
+		/*int has_proc = 0;
 		for (p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
 				has_proc = 1;
-				debugf("swtich to proc %d", p - pool);
+				tracef("swtich to proc %d", p - pool);
 				p->state = RUNNING;
 				current_proc = p;
 				swtch(&idle.context, &p->context);
@@ -110,7 +131,15 @@ void scheduler()
 		}
 		if(has_proc == 0) {
 			panic("all app are over!\n");
+		}*/
+		p = fetch_task();
+		if (p == NULL) {
+			panic("all app are over!\n");
 		}
+		tracef("swtich to proc %d", p - pool);
+		p->state = RUNNING;
+		current_proc = p;
+		swtch(&idle.context, &p->context);
 	}
 }
 
@@ -133,6 +162,7 @@ void sched()
 void yield()
 {
 	current_proc->state = RUNNABLE;
+	add_task(current_proc);
 	sched();
 }
 
@@ -186,6 +216,7 @@ int fork()
 	np->trapframe->a0 = 0;
 	np->parent = p;
 	np->state = RUNNABLE;
+	add_task(np);
 	return np->pid;
 }
 
@@ -266,6 +297,7 @@ int wait(int pid, int *code)
 			return -1;
 		}
 		p->state = RUNNABLE;
+		add_task(p);
 		sched();
 	}
 }

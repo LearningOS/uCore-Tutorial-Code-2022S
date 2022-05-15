@@ -177,6 +177,17 @@ err0:
 	fileclose(f1);
 	return -1;
 }
+uint64 sys_spawn(uint64 va)
+{
+	// TODO: your job is to complete the sys call
+	return -1;
+}
+
+uint64 sys_set_priority(long long prio)
+{
+	// TODO: your job is to complete the sys call
+	return -1;
+}
 
 uint64 sys_openat(uint64 va, uint64 omode, uint64 _flags)
 {
@@ -199,6 +210,25 @@ uint64 sys_close(int fd)
 	fileclose(f);
 	p->files[fd] = 0;
 	return 0;
+}
+
+int sys_fstat(int fd, uint64 stat)
+{
+	//TODO: your job is to complete the syscall
+	return -1;
+}
+
+int sys_linkat(int olddirfd, uint64 oldpath, int newdirfd, uint64 newpath,
+	       uint64 flags)
+{
+	//TODO: your job is to complete the syscall
+	return -1;
+}
+
+int sys_unlinkat(int dirfd, uint64 name, uint64 flags)
+{
+	//TODO: your job is to complete the syscall
+	return -1;
 }
 
 extern char trap_page[];
@@ -250,6 +280,16 @@ void syscall()
 		break;
 	case SYS_pipe2:
 		ret = sys_pipe(args[0]);
+	case SYS_fstat:
+		ret = sys_fstat(args[0], args[1]);
+		break;
+	case SYS_linkat:
+		ret = sys_linkat(args[0], args[1], args[2], args[3], args[4]);
+		break;
+	case SYS_unlinkat:
+		ret = sys_unlinkat(args[0], args[1], args[2]);
+	case SYS_spawn:
+		ret = sys_spawn(args[0]);
 		break;
 	default:
 		ret = -1;
