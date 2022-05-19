@@ -257,6 +257,8 @@ int sys_waittid(int tid)
 	if (t->state != EXITED) {
 		return -2;
 	}
+	memset((void *)t->kstack, 7, KSTACK_SIZE);
+	t->tid = -1;
 	t->state = T_UNUSED;
 	return t->exit_code;
 }

@@ -256,6 +256,9 @@ void freepagetable(pagetable_t pagetable, uint64 max_page)
 void freethread(struct thread *t)
 {
 	pagetable_t pt = t->process->pagetable;
+	// fill with junk
+	memset((void *)t->trapframe, 6, TRAP_PAGE_SIZE);
+	memset(&t->context, 6, sizeof(t->context));
 	uvmunmap(pt, get_thread_trapframe_va(t->tid), 1, 0);
 	uvmunmap(pt, get_thread_ustack_base_va(t), USTACK_SIZE / PAGE_SIZE, 1);
 }
@@ -272,6 +275,8 @@ void freeproc(struct proc *p)
 	if (p->pagetable)
 		freepagetable(p->pagetable, p->max_page);
 	p->pagetable = 0;
+	p->max_page = 0;
+	p->ustack_base = 0;
 	for (int i = 0; i > FD_BUFFER_SIZE; i++) {
 		if (p->files[i] != NULL) {
 			fileclose(p->files[i]);
@@ -395,6 +400,8 @@ int wait(int pid, int *code)
 					np->state = P_UNUSED;
 					pid = np->pid;
 					*code = np->exit_code;
+					memset((void *)np->threads[0].kstack, 9,
+					       KSTACK_SIZE);
 					return pid;
 				}
 			}
