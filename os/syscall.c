@@ -177,6 +177,7 @@ err0:
 	fileclose(f1);
 	return -1;
 }
+
 uint64 sys_spawn(uint64 va)
 {
 	// TODO: your job is to complete the sys call
@@ -231,16 +232,47 @@ int sys_unlinkat(int dirfd, uint64 name, uint64 flags)
 	return -1;
 }
 
+int sys_thread_create(uint64 entry, uint64 arg)
+{
+	struct proc *p = curr_proc();
+	int tid = allocthread(p, entry, 1);
+	struct thread *t = &p->threads[tid];
+	t->trapframe->a0 = arg;
+	t->state = RUNNABLE;
+	add_task(t);
+	return tid;
+}
+
+int sys_gettid()
+{
+	return curr_thread()->tid;
+}
+
+int sys_waittid(int tid)
+{
+	struct thread *t = &curr_proc()->threads[tid];
+	if (t->state == T_UNUSED || tid == curr_thread()->tid) {
+		return -1;
+	}
+	if (t->state != EXITED) {
+		return -2;
+	}
+	t->state = T_UNUSED;
+	return t->exit_code;
+}
+
 extern char trap_page[];
 
 void syscall()
 {
-	struct trapframe *trapframe = curr_proc()->trapframe;
+	struct trapframe *trapframe = curr_thread()->trapframe;
 	int id = trapframe->a7, ret;
 	uint64 args[6] = { trapframe->a0, trapframe->a1, trapframe->a2,
 			   trapframe->a3, trapframe->a4, trapframe->a5 };
-	tracef("syscall %d args = [%x, %x, %x, %x, %x, %x]", id, args[0],
-	       args[1], args[2], args[3], args[4], args[5]);
+	if (id != SYS_write && id != SYS_read && id != SYS_sched_yield) {
+		debugf("syscall %d args = [%x, %x, %x, %x, %x, %x]", id,
+		       args[0], args[1], args[2], args[3], args[4], args[5]);
+	}
 	switch (id) {
 	case SYS_write:
 		ret = sys_write(args[0], args[1], args[2]);
@@ -257,6 +289,9 @@ void syscall()
 	case SYS_exit:
 		sys_exit(args[0]);
 		// __builtin_unreachable();
+	// case SYS_nanosleep:
+	// 	ret = sys_nanosleep(args[0]);
+	// 	break;
 	case SYS_sched_yield:
 		ret = sys_sched_yield();
 		break;
@@ -291,10 +326,21 @@ void syscall()
 	case SYS_spawn:
 		ret = sys_spawn(args[0]);
 		break;
+	case SYS_thread_create:
+		ret = sys_thread_create(args[0], args[1]);
+		break;
+	case SYS_gettid:
+		ret = sys_gettid();
+		break;
+	case SYS_waittid:
+		ret = sys_waittid(args[0]);
+		break;
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);
 	}
-	trapframe->a0 = ret;
-	tracef("syscall ret %d", ret);
+	curr_thread()->trapframe->a0 = ret;
+	if (id != SYS_write && id != SYS_read && id != SYS_sched_yield) {
+		debugf("syscall %d ret %d", id, ret);
+	}
 }

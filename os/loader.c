@@ -27,23 +27,14 @@ int bin_loader(struct inode *ip, struct proc *p)
 			     PTE_U | PTE_R | PTE_W | PTE_X) != 0)
 			panic("...");
 	}
-	// map ustack
-	p->ustack = va_end + PAGE_SIZE;
-	for (uint64 va = p->ustack; va < p->ustack + USTACK_SIZE;
-	     va += PGSIZE) {
-		page = kalloc();
-		if (page == 0) {
-			panic("...");
-		}
-		memset(page, 0, PGSIZE);
-		if (mappages(p->pagetable, va, PGSIZE, (uint64)page,
-			     PTE_U | PTE_R | PTE_W) != 0)
-			panic("...");
+
+	p->max_page = va_end / PAGE_SIZE;
+	p->ustack_base = va_end + PAGE_SIZE;
+	// alloc main thread
+	if (allocthread(p, va_start, 1) != 0) {
+		panic("proc %d alloc main thread failed!", p->pid);
 	}
-	p->trapframe->sp = p->ustack + USTACK_SIZE;
-	p->trapframe->epc = va_start;
-	p->max_page = PGROUNDUP(p->ustack + USTACK_SIZE - 1) / PAGE_SIZE;
-	p->state = RUNNABLE;
+	debugf("bin loader fin");
 	return 0;
 }
 
@@ -63,7 +54,9 @@ int load_init_app()
 	char *argv[2];
 	argv[0] = INIT_PROC;
 	argv[1] = NULL;
-	p->trapframe->a0 = push_argv(p, argv);
-	add_task(p);
+	struct thread *t = &p->threads[0];
+	t->trapframe->a0 = push_argv(p, argv);
+	t->state = RUNNABLE;
+	add_task(t);
 	return 0;
 }

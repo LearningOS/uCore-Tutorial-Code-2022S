@@ -2,6 +2,7 @@
 #define LOG_H
 
 extern void printf(char *, ...);
+extern int procid();
 extern int threadid();
 extern void dummy(int, ...);
 extern void shutdown();
@@ -57,9 +58,9 @@ enum LOG_COLOR {
 #if defined(USE_LOG_ERROR)
 #define errorf(fmt, ...)                                                       \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d]" fmt "\x1b[0m\n", RED, "ERROR", tid,   \
-		       ##__VA_ARGS__);                                         \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d]" fmt "\x1b[0m\n", RED, "ERROR",     \
+		       pid, tid, ##__VA_ARGS__);                               \
 	} while (0)
 #else
 #define errorf(fmt, ...) dummy(0, ##__VA_ARGS__)
@@ -68,9 +69,9 @@ enum LOG_COLOR {
 #if defined(USE_LOG_WARN)
 #define warnf(fmt, ...)                                                        \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d]" fmt "\x1b[0m\n", YELLOW, "WARN", tid, \
-		       ##__VA_ARGS__);                                         \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d]" fmt "\x1b[0m\n", YELLOW, "WARN",   \
+		       pid, tid, ##__VA_ARGS__);                               \
 	} while (0)
 #else
 #define warnf(fmt, ...) dummy(0, ##__VA_ARGS__)
@@ -79,9 +80,9 @@ enum LOG_COLOR {
 #if defined(USE_LOG_INFO)
 #define infof(fmt, ...)                                                        \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d]" fmt "\x1b[0m\n", BLUE, "INFO", tid,   \
-		       ##__VA_ARGS__);                                         \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d]" fmt "\x1b[0m\n", BLUE, "INFO",     \
+		       pid, tid, ##__VA_ARGS__);                               \
 	} while (0)
 #else
 #define infof(fmt, ...) dummy(0, ##__VA_ARGS__)
@@ -90,9 +91,9 @@ enum LOG_COLOR {
 #if defined(USE_LOG_DEBUG)
 #define debugf(fmt, ...)                                                       \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d]" fmt "\x1b[0m\n", GREEN, "DEBUG", tid, \
-		       ##__VA_ARGS__);                                         \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d]" fmt "\x1b[0m\n", GREEN, "DEBUG",   \
+		       pid, tid, ##__VA_ARGS__);                               \
 	} while (0)
 #else
 #define debugf(fmt, ...) dummy(0, ##__VA_ARGS__)
@@ -101,9 +102,9 @@ enum LOG_COLOR {
 #if defined(USE_LOG_TRACE)
 #define tracef(fmt, ...)                                                       \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d]" fmt "\x1b[0m\n", GRAY, "TRACE", tid,  \
-		       ##__VA_ARGS__);                                         \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d]" fmt "\x1b[0m\n", GRAY, "TRACE",    \
+		       pid, tid, ##__VA_ARGS__);                               \
 	} while (0)
 #else
 #define tracef(fmt, ...) dummy(0, ##__VA_ARGS__)
@@ -111,9 +112,9 @@ enum LOG_COLOR {
 
 #define panic(fmt, ...)                                                        \
 	do {                                                                   \
-		int tid = threadid();                                          \
-		printf("\x1b[%dm[%s %d] %s:%d: " fmt "\x1b[0m\n", RED,         \
-		       "PANIC", tid, __FILE__, __LINE__, ##__VA_ARGS__);       \
+		int pid = procid(), tid = threadid();                          \
+		printf("\x1b[%dm[%s %d-%d] %s:%d: " fmt "\x1b[0m\n", RED,      \
+		       "PANIC", pid, tid, __FILE__, __LINE__, ##__VA_ARGS__);  \
 		shutdown();                                                    \
 		__builtin_unreachable();                                       \
 	} while (0)

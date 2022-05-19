@@ -294,3 +294,16 @@
 #define SYS_pidfd_getfd 438
 #define SYS_faccessat2 439
 #define SYS_riscv_flush_icache 244 + 15
+#define SYS_thread_create 460
+#define SYS_waittid 462
+#define SYS_mutex_create 463
+#define SYS_mutex_lock 464
+#define SYS_mutex_try_lock 465
+#define SYS_mutex_unlock 466
+#define SYS_semaphore_create 467
+#define SYS_semaphore_up 468
+#define SYS_semaphore_try_up 469
+#define SYS_semaphore_down 470
+#define SYS_condvar_create 471
+#define SYS_condvar_signal 472
+#define SYS_condvar_wait 473

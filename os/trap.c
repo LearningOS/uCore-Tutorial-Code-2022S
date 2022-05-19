@@ -5,6 +5,7 @@
 #include "syscall.h"
 #include "timer.h"
 #include "virtio.h"
+#include "proc.h"
 
 extern char trampoline[], uservec[];
 extern char userret[], kernelvec[];
@@ -72,7 +73,7 @@ void devintr(uint64 cause)
 void usertrap()
 {
 	set_kerneltrap();
-	struct trapframe *trapframe = curr_proc()->trapframe;
+	struct trapframe *trapframe = curr_thread()->trapframe;
 	tracef("trap from user epc = %p", trapframe->epc);
 	if ((r_sstatus() & SSTATUS_SPP) != 0)
 		panic("usertrap: not from user mode");
@@ -115,10 +116,10 @@ void usertrap()
 void usertrapret()
 {
 	set_usertrap();
-	struct trapframe *trapframe = curr_proc()->trapframe;
+	struct trapframe *trapframe = curr_thread()->trapframe;
 	trapframe->kernel_satp = r_satp(); // kernel page table
 	trapframe->kernel_sp =
-		curr_proc()->kstack + KSTACK_SIZE; // process's kernel stack
+		curr_thread()->kstack + KSTACK_SIZE; // process's kernel stack
 	trapframe->kernel_trap = (uint64)usertrap;
 	trapframe->kernel_hartid = r_tp(); // unuesd
 
@@ -135,8 +136,9 @@ void usertrapret()
 	// tell trampoline.S the user page table to switch to.
 	uint64 satp = MAKE_SATP(curr_proc()->pagetable);
 	uint64 fn = TRAMPOLINE + (userret - trampoline);
-	tracef("return to user @ %p", trapframe->epc);
-	((void (*)(uint64, uint64))fn)(TRAPFRAME, satp);
+	uint64 trapframe_va = get_thread_trapframe_va(curr_thread()->tid);
+	debugf("return to user @ %p, sp @ %p", trapframe->epc, trapframe->sp);
+	((void (*)(uint64, uint64))fn)(trapframe_va, satp);
 }
 
 void kerneltrap()
@@ -145,7 +147,7 @@ void kerneltrap()
 	uint64 sstatus = r_sstatus();
 	uint64 scause = r_scause();
 
-	debugf("kernel tarp: epc = %p, cause = %d", sepc, scause);
+	debugf("kernel trap: epc = %p, cause = %d", sepc, scause);
 
 	if ((sstatus & SSTATUS_SPP) == 0)
 		panic("kerneltrap: not from supervisor mode");
