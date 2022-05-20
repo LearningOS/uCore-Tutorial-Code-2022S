@@ -99,6 +99,7 @@ struct thread *fetch_task()
 	struct thread *t = id_to_task(index);
 	if (t == NULL) {
 		debugf("No task to fetch\n");
+		return t;
 	}
 	int tid = t->tid;
 	int pid = t->process->pid;
