@@ -3,10 +3,12 @@
 
 #include "riscv.h"
 #include "types.h"
+#include "sync.h"
 
 #define NPROC (128)
 #define NTHREAD (16)
 #define FD_BUFFER_SIZE (16)
+#define LOCK_POOL_SIZE (8)
 
 struct file;
 
@@ -56,6 +58,11 @@ struct proc {
 	//File descriptor table, using to record the files opened by the process
 	struct file *files[FD_BUFFER_SIZE];
 	struct thread threads[NTHREAD];
+	// Use dummy increasing id as index index of lock pool because we don't have destroy method yet
+	uint next_mutex_id, next_semaphore_id, next_condvar_id;
+	struct mutex mutex_pool[LOCK_POOL_SIZE];
+	struct semaphore semaphore_pool[LOCK_POOL_SIZE];
+	struct condvar condvar_pool[LOCK_POOL_SIZE];
 };
 
 int cpuid();
@@ -70,6 +77,8 @@ int fork();
 int exec(char *, char **);
 int wait(int, int *);
 void add_task(struct thread *);
+struct thread *id_to_task(int);
+int task_to_id(struct thread *);
 struct thread *pop_task();
 struct proc *allocproc();
 int allocthread(struct proc *p, uint64 entry, int alloc_user_res);

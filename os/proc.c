@@ -55,7 +55,7 @@ void proc_init()
 	// for procid() and threadid()
 	idle.process = pool;
 	idle.tid = -1;
-	init_queue(&task_queue);
+	init_queue(&task_queue, QUEUE_SIZE, process_queue_data);
 }
 
 int allocpid()
@@ -73,16 +73,34 @@ int alloctid(const struct proc *process)
 	return -1;
 }
 
-struct thread *fetch_task()
+// get task by unique task id
+struct thread *id_to_task(int index)
 {
-	int index = pop_queue(&task_queue);
 	if (index < 0) {
-		debugf("No task to fetch\n");
 		return NULL;
 	}
 	int pool_id = index / NTHREAD;
 	int tid = index % NTHREAD;
 	struct thread *t = &pool[pool_id].threads[tid];
+	return t;
+}
+
+// ncode unique task id for each thread
+int task_to_id(struct thread *t)
+{
+	int pool_id = t->process - pool;
+	int task_id = pool_id * NTHREAD + t->tid;
+	return task_id;
+}
+
+struct thread *fetch_task()
+{
+	int index = pop_queue(&task_queue);
+	struct thread *t = id_to_task(index);
+	if (t == NULL) {
+		debugf("No task to fetch\n");
+	}
+	int tid = t->tid;
 	int pid = t->process->pid;
 	tracef("fetch index %d(pid=%d, tid=%d, addr=%p) from task queue", index,
 	       pid, tid, (uint64)t);
@@ -91,9 +109,8 @@ struct thread *fetch_task()
 
 void add_task(struct thread *t)
 {
-	int pool_id = t->process - pool, pid = t->process->pid;
-	// encode unique task id for each thread
-	int task_id = pool_id * NTHREAD + t->tid;
+	int task_id = task_to_id(t);
+	int pid = t->process->pid;
 	push_queue(&task_queue, task_id);
 	tracef("add index %d(pid=%d, tid=%d, addr=%p) to task queue", task_id,
 	       pid, t->tid, (uint64)t);
@@ -121,6 +138,9 @@ found:
 	p->exit_code = 0;
 	p->pagetable = uvmcreate();
 	memset((void *)p->files, 0, sizeof(struct file *) * FD_BUFFER_SIZE);
+	p->next_mutex_id = 0;
+	p->next_semaphore_id = 0;
+	p->next_condvar_id = 0;
 	return p;
 }
 

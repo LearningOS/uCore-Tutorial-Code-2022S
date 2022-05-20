@@ -1,7 +1,8 @@
-#include "syscall.h"
 #include "console.h"
 #include "defs.h"
 #include "loader.h"
+#include "sync.h"
+#include "syscall.h"
 #include "syscall_ids.h"
 #include "timer.h"
 #include "trap.h"
@@ -236,6 +237,10 @@ int sys_thread_create(uint64 entry, uint64 arg)
 {
 	struct proc *p = curr_proc();
 	int tid = allocthread(p, entry, 1);
+	if (tid < 0) {
+		errorf("fail to create thread");
+		return -1;
+	}
 	struct thread *t = &p->threads[tid];
 	t->trapframe->a0 = arg;
 	t->state = RUNNABLE;
@@ -250,6 +255,10 @@ int sys_gettid()
 
 int sys_waittid(int tid)
 {
+	if (tid < 0 || tid >= NTHREAD) {
+		errorf("unexpected tid %d", tid);
+		return -1;
+	}
 	struct thread *t = &curr_proc()->threads[tid];
 	if (t->state == T_UNUSED || tid == curr_thread()->tid) {
 		return -1;
@@ -261,6 +270,91 @@ int sys_waittid(int tid)
 	t->tid = -1;
 	t->state = T_UNUSED;
 	return t->exit_code;
+}
+
+int sys_mutex_create(int blocking)
+{
+	struct mutex *m = mutex_create(blocking);
+	return m - curr_proc()->mutex_pool;
+}
+
+int sys_mutex_lock(int mutex_id)
+{
+	if (mutex_id < 0 || mutex_id >= curr_proc()->next_mutex_id) {
+		errorf("Unexpected mutex id %d", mutex_id);
+		return -1;
+	}
+	mutex_lock(&curr_proc()->mutex_pool[mutex_id]);
+	return 0;
+}
+
+int sys_mutex_unlock(int mutex_id)
+{
+	if (mutex_id < 0 || mutex_id >= curr_proc()->next_mutex_id) {
+		errorf("Unexpected mutex id %d", mutex_id);
+		return -1;
+	}
+	mutex_unlock(&curr_proc()->mutex_pool[mutex_id]);
+	return 0;
+}
+
+int sys_semaphore_create(int res_count)
+{
+	struct semaphore *s = semaphore_create(res_count);
+	return s - curr_proc()->semaphore_pool;
+}
+
+int sys_semaphore_up(int semaphore_id)
+{
+	if (semaphore_id < 0 ||
+	    semaphore_id >= curr_proc()->next_semaphore_id) {
+		errorf("Unexpected semaphore id %d", semaphore_id);
+		return -1;
+	}
+	semaphore_up(&curr_proc()->semaphore_pool[semaphore_id]);
+	return 0;
+}
+
+int sys_semaphore_down(int semaphore_id)
+{
+	if (semaphore_id < 0 ||
+	    semaphore_id >= curr_proc()->next_semaphore_id) {
+		errorf("Unexpected semaphore id %d", semaphore_id);
+		return -1;
+	}
+	semaphore_down(&curr_proc()->semaphore_pool[semaphore_id]);
+	return 0;
+}
+
+int sys_condvar_create()
+{
+	struct condvar *c = condvar_create();
+	return c - curr_proc()->condvar_pool;
+}
+
+int sys_condvar_signal(int cond_id)
+{
+	if (cond_id < 0 || cond_id >= curr_proc()->next_condvar_id) {
+		errorf("Unexpected condvar id %d", cond_id);
+		return -1;
+	}
+	cond_signal(&curr_proc()->condvar_pool[cond_id]);
+	return 0;
+}
+
+int sys_condvar_wait(int cond_id, int mutex_id)
+{
+	if (cond_id < 0 || cond_id >= curr_proc()->next_condvar_id) {
+		errorf("Unexpected condvar id %d", cond_id);
+		return -1;
+	}
+	if (mutex_id < 0 || mutex_id >= curr_proc()->next_mutex_id) {
+		errorf("Unexpected mutex id %d", mutex_id);
+		return -1;
+	}
+	cond_wait(&curr_proc()->condvar_pool[cond_id],
+		  &curr_proc()->mutex_pool[mutex_id]);
+	return 0;
 }
 
 extern char trap_page[];
@@ -336,6 +430,33 @@ void syscall()
 		break;
 	case SYS_waittid:
 		ret = sys_waittid(args[0]);
+		break;
+	case SYS_mutex_create:
+		ret = sys_mutex_create(args[0]);
+		break;
+	case SYS_mutex_lock:
+		ret = sys_mutex_lock(args[0]);
+		break;
+	case SYS_mutex_unlock:
+		ret = sys_mutex_unlock(args[0]);
+		break;
+	case SYS_semaphore_create:
+		ret = sys_semaphore_create(args[0]);
+		break;
+	case SYS_semaphore_up:
+		ret = sys_semaphore_up(args[0]);
+		break;
+	case SYS_semaphore_down:
+		ret = sys_semaphore_down(args[0]);
+		break;
+	case SYS_condvar_create:
+		ret = sys_condvar_create();
+		break;
+	case SYS_condvar_signal:
+		ret = sys_condvar_signal(args[0]);
+		break;
+	case SYS_condvar_wait:
+		ret = sys_condvar_wait(args[0], args[1]);
 		break;
 	default:
 		ret = -1;
