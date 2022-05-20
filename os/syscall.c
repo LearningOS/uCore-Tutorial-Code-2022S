@@ -275,7 +275,13 @@ int sys_waittid(int tid)
 int sys_mutex_create(int blocking)
 {
 	struct mutex *m = mutex_create(blocking);
-	return m - curr_proc()->mutex_pool;
+	if (m == NULL) {
+		errorf("fail to create mutex: out of resource");
+		return -1;
+	}
+	int mutex_id = m - curr_proc()->mutex_pool;
+	debugf("create mutex %d", mutex_id);
+	return mutex_id;
 }
 
 int sys_mutex_lock(int mutex_id)
@@ -301,7 +307,13 @@ int sys_mutex_unlock(int mutex_id)
 int sys_semaphore_create(int res_count)
 {
 	struct semaphore *s = semaphore_create(res_count);
-	return s - curr_proc()->semaphore_pool;
+	if (s == NULL) {
+		errorf("fail to create semaphore: out of resource");
+		return -1;
+	}
+	int sem_id = s - curr_proc()->semaphore_pool;
+	debugf("create semaphore %d", sem_id);
+	return sem_id;
 }
 
 int sys_semaphore_up(int semaphore_id)
@@ -329,7 +341,13 @@ int sys_semaphore_down(int semaphore_id)
 int sys_condvar_create()
 {
 	struct condvar *c = condvar_create();
-	return c - curr_proc()->condvar_pool;
+	if (c == NULL) {
+		errorf("fail to create condvar: out of resource");
+		return -1;
+	}
+	int cond_id = c - curr_proc()->condvar_pool;
+	debugf("create condvar %d", cond_id);
+	return cond_id;
 }
 
 int sys_condvar_signal(int cond_id)
