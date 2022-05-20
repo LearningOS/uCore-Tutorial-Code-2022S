@@ -83,8 +83,11 @@ void semaphore_up(struct semaphore *s)
 {
 	s->count++;
 	if (s->count <= 0) {
-		// count <=0 after up means wait queue not empty
+		// count <= 0 after up means wait queue not empty
 		struct thread *t = id_to_task(pop_queue(&s->wait_queue));
+		if (t == NULL) {
+			panic("count <= 0 after up but wait queue is empty?");
+		}
 		t->state = RUNNABLE;
 		add_task(t);
 		debugf("semaphore up and notify another task");

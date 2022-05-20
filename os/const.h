@@ -24,7 +24,7 @@
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
 
 #define MAX_APP_NUM (32)
-#define MAX_STR_LEN (200)
+#define MAX_STR_LEN (300)
 #define IDLE_PID (0)
 #define MAX_ARG_NUM (32) // max exec arguments
 
