@@ -446,6 +446,7 @@ void exit(int code)
 	debugf("thread exit with %d", code);
 	freethread(t);
 	if (tid == 0) {
+		p->exit_code = code;
 		freeproc(p);
 		debugf("proc exit");
 		if (p->parent != NULL) {
