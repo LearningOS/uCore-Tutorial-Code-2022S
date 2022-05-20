@@ -13,6 +13,7 @@ struct mutex *mutex_create(int blocking)
 	m->blocking = blocking;
 	m->locked = 0;
 	if (blocking) {
+		// blocking mutex need wait queue but spinning mutex not
 		init_queue(&m->wait_queue, WAIT_QUEUE_MAX_LENGTH,
 			   m->_wait_queue_data);
 	}

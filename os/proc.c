@@ -142,6 +142,7 @@ found:
 	p->next_mutex_id = 0;
 	p->next_semaphore_id = 0;
 	p->next_condvar_id = 0;
+	// LAB5: you may initialize your proc variables here
 	return p;
 }
 
