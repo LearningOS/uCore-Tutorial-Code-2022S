@@ -242,7 +242,7 @@ int sys_waittid(int tid)
 }
 
 /*
-*	LAB5: In the TA's reference implementation, here defines funtion
+*	LAB5: (3) In the TA's reference implementation, here defines funtion
 *					int deadlock_detect(const int available[LOCK_POOL_SIZE],
 *						const int allocation[NTHREAD][LOCK_POOL_SIZE],
 *						const int request[NTHREAD][LOCK_POOL_SIZE])
@@ -257,7 +257,7 @@ int sys_mutex_create(int blocking)
 		errorf("fail to create mutex: out of resource");
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect here
+	// LAB5: (4-1) You may want to maintain some variables for detect here
 	int mutex_id = m - curr_proc()->mutex_pool;
 	debugf("create mutex %d", mutex_id);
 	return mutex_id;
@@ -269,7 +269,7 @@ int sys_mutex_lock(int mutex_id)
 		errorf("Unexpected mutex id %d", mutex_id);
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect
+	// LAB5: (4-1) You may want to maintain some variables for detect
 	//       or call your detect algorithm here
 	mutex_lock(&curr_proc()->mutex_pool[mutex_id]);
 	return 0;
@@ -281,7 +281,7 @@ int sys_mutex_unlock(int mutex_id)
 		errorf("Unexpected mutex id %d", mutex_id);
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect here
+	// LAB5: (4-1) You may want to maintain some variables for detect here
 	mutex_unlock(&curr_proc()->mutex_pool[mutex_id]);
 	return 0;
 }
@@ -293,7 +293,7 @@ int sys_semaphore_create(int res_count)
 		errorf("fail to create semaphore: out of resource");
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect here
+	// LAB5: (4-2) You may want to maintain some variables for detect here
 	int sem_id = s - curr_proc()->semaphore_pool;
 	debugf("create semaphore %d", sem_id);
 	return sem_id;
@@ -306,7 +306,7 @@ int sys_semaphore_up(int semaphore_id)
 		errorf("Unexpected semaphore id %d", semaphore_id);
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect here
+	// LAB5: (4-2) You may want to maintain some variables for detect here
 	semaphore_up(&curr_proc()->semaphore_pool[semaphore_id]);
 	return 0;
 }
@@ -318,7 +318,7 @@ int sys_semaphore_down(int semaphore_id)
 		errorf("Unexpected semaphore id %d", semaphore_id);
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect
+	// LAB5: (4-2) You may want to maintain some variables for detect
 	//       or call your detect algorithm here
 	semaphore_down(&curr_proc()->semaphore_pool[semaphore_id]);
 	return 0;
@@ -331,7 +331,6 @@ int sys_condvar_create()
 		errorf("fail to create condvar: out of resource");
 		return -1;
 	}
-	// LAB5: You may want to maintain some variables for detect here
 	int cond_id = c - curr_proc()->condvar_pool;
 	debugf("create condvar %d", cond_id);
 	return cond_id;
@@ -362,7 +361,7 @@ int sys_condvar_wait(int cond_id, int mutex_id)
 	return 0;
 }
 
-// LAB5: you may need to define function enable_deadlock_detect here
+// LAB5: (2) you may need to define function enable_deadlock_detect here
 
 extern char trap_page[];
 
@@ -454,7 +453,7 @@ void syscall()
 	case SYS_condvar_wait:
 		ret = sys_condvar_wait(args[0], args[1]);
 		break;
-	// LAB5: you may need to add case SYS_enable_deadlock_detect here
+	// LAB5: (2) you may need to add case SYS_enable_deadlock_detect here
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);
