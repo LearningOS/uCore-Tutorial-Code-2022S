@@ -26,10 +26,6 @@ struct condvar {
 	int _wait_queue_data[WAIT_QUEUE_MAX_LENGTH];
 };
 
-extern struct mutex *mutex_pool;
-extern struct semaphore *semaphore_pool;
-extern struct condvar *condvar_pool;
-
 struct mutex *mutex_create(int blocking);
 void mutex_lock(struct mutex *);
 void mutex_unlock(struct mutex *);
