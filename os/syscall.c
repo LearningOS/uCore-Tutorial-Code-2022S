@@ -39,12 +39,35 @@ uint64 sys_gettimeofday(TimeVal *val, int _tz)
 /*
 * LAB1: you may need to define sys_task_info here
 */
+uint64 sys_copytaskinfo(TaskInfo*cur_task_info,TaskInfo*aim_task_info){
+	aim_task_info->status = cur_task_info->status;
+	for(int i=0;i<MAX_SYSCALL_NUM;i++){
+		aim_task_info->syscall_times[i]=cur_task_info->syscall_times[i];
+	}
+	aim_task_info->time = cur_task_info->time;
+	return 0;
+}
+uint64 sys_updatetaskinfo(TaskInfo*task_info,int id,TimeVal*start_time){
+	if(id>MAX_SYSCALL_NUM){
+		errorf("id %d over MAX_SYSCALL_NUM",id);
+	}else{
+		task_info->syscall_times[id]+=1;
+	}
+	// todo update run time!!!
+	struct TimeVal now_time;
+	sys_gettimeofday(&now_time,0);
+
+	task_info->time = (int)((now_time.sec*1000-start_time->sec*1000)+(now_time.usec/1000-start_time->usec/1000));
+	return 0;
+
+}
 
 extern char trap_page[];
 
 void syscall()
 {
 	struct trapframe *trapframe = curr_proc()->trapframe;
+	struct TaskInfo *task_info = curr_proc()->task_info;
 	int id = trapframe->a7, ret;
 	uint64 args[6] = { trapframe->a0, trapframe->a1, trapframe->a2,
 			   trapframe->a3, trapframe->a4, trapframe->a5 };
@@ -53,6 +76,7 @@ void syscall()
 	/*
 	* LAB1: you may need to update syscall counter for task info here
 	*/
+	sys_updatetaskinfo(task_info,id,curr_proc()->start_time);
 	switch (id) {
 	case SYS_write:
 		ret = sys_write(args[0], (char *)args[1], args[2]);
@@ -65,6 +89,9 @@ void syscall()
 		break;
 	case SYS_gettimeofday:
 		ret = sys_gettimeofday((TimeVal *)args[0], args[1]);
+		break;
+	case SYSCALL_TASK_INFO:
+	ret = sys_copytaskinfo(task_info,(TaskInfo*)args[0]);
 		break;
 	/*
 	* LAB1: you may need to add SYS_taskinfo case here

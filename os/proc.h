@@ -38,11 +38,35 @@ struct proc {
 	/*
 	* LAB1: you may need to add some new fields here
 	*/
+	struct TaskInfo* task_info;
+	struct TimeVal* start_time;
+
 };
 
 /*
 * LAB1: you may need to define struct for TaskInfo here
 */
+#define MAX_SYSCALL_NUM 500
+typedef struct {
+	uint64 dev; // 文件所在磁盘驱动器号，不考虑
+	uint64 ino; // inode 文件所在 inode 编号
+	uint32 mode; // 文件类型
+	uint32 nlink; // 硬链接数量，初始为1
+	uint64 pad[7]; // 无需考虑，为了兼容性设计
+} Stat;
+
+typedef enum {
+	UnInit,
+	Ready,
+	Running,
+	Exited,
+} TaskStatus;
+
+typedef struct TaskInfo{
+	TaskStatus status;
+	unsigned int syscall_times[MAX_SYSCALL_NUM];
+	int time;
+} TaskInfo;
 
 struct proc *curr_proc();
 void exit(int);

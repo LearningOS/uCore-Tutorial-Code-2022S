@@ -2,8 +2,12 @@
 #include "defs.h"
 #include "loader.h"
 #include "trap.h"
+#include "timer.h"
+#include "syscall.h"
 
 struct proc pool[NPROC];
+struct TaskInfo task_info_pool[NPROC];
+struct TimeVal start_time_pool[NPROC];
 char kstack[NPROC][PAGE_SIZE];
 __attribute__((aligned(4096))) char ustack[NPROC][PAGE_SIZE];
 __attribute__((aligned(4096))) char trapframe[NPROC][PAGE_SIZE];
@@ -34,6 +38,9 @@ void proc_init(void)
 		/*
 		* LAB1: you may need to initialize your new fields of proc here
 		*/
+		p->task_info = &task_info_pool[p-pool];
+		p->start_time = &start_time_pool[p-pool];
+
 	}
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = 0;
@@ -67,6 +74,7 @@ found:
 	memset((void *)p->kstack, 0, PAGE_SIZE);
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + PAGE_SIZE;
+	p->task_info->time = -1;
 	return p;
 }
 
@@ -85,6 +93,11 @@ void scheduler(void)
 				* LAB1: you may need to init proc start time here
 				*/
 				p->state = RUNNING;
+				p->task_info->status = Running;
+				if(p->task_info->time==-1){
+					sys_gettimeofday(p->start_time,0);
+					p->task_info->time=0;
+				}
 				current_proc = p;
 				swtch(&idle.context, &p->context);
 			}
