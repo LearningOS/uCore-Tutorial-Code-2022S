@@ -1,6 +1,6 @@
 #ifndef SYSCALL_H
 #define SYSCALL_H
-
-void syscall();
+#include <trap.h>
+void syscall(struct trapframe * trapF);
 
 #endif // SYSCALL_H

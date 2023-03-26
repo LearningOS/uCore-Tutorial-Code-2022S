@@ -26,9 +26,9 @@ __attribute__((noreturn)) void sys_exit(int code)
 
 extern char trap_page[];
 
-void syscall()
+void syscall(struct trapframe * trapframe)
 {
-	struct trapframe *trapframe = (struct trapframe *)trap_page;
+
 	int id = trapframe->a7, ret;
 	uint64 args[6] = { trapframe->a0, trapframe->a1, trapframe->a2,
 			   trapframe->a3, trapframe->a4, trapframe->a5 };

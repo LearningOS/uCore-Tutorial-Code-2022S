@@ -1,5 +1,6 @@
     .section .text.entry
     .globl _entry
+# 内核代码的入口
 _entry:
     la sp, boot_stack_top
     call main

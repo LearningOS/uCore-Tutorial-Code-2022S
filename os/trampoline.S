@@ -25,7 +25,7 @@ uservec:
         #
 
 	# swap a0 and sscratch
-        # so that a0 is TRAPFRAME
+        # so that a0 is TRAPFRAME, sscratch is user's a0
         csrrw a0, sscratch, a0
 
         # save the user registers in TRAPFRAME
@@ -63,17 +63,21 @@ uservec:
 	# save the user a0 in p->trapframe->a0
         csrr t0, sscratch
         sd t0, 112(a0)
-
+	# 保存返回用户态的地址epc csrr t1, sepc = write sepc to t1, sd t1,24(a0) = save t1 to address a0+24(也就是epc)
+	# a0+24 = trapframe->epc
         csrr t1, sepc
         sd t1, 24(a0)
-
+ 	# 加载内核栈指针
         ld sp, 8(a0)
         ld tp, 32(a0)
         ld t1, 0(a0)
         # csrw satp, t1
         # sfence.vma zero, zero
-        ld t0, 16(a0)
-        jr t0
+	# kernel_trap 保存函数着 usertrap
+//        ld t0, 16(a0)
+//        jr t0
+	// 直接调用 usertrap
+	call usertrap
 
 .globl userret
 userret:
@@ -124,7 +128,10 @@ userret:
         ld t5, 272(a0)
         ld t6, 280(a0)
 
+
 	# restore user a0, and save TRAPFRAME in sscratch
+# csrrw rs, crs,rd 是将crs的值写入rs，同时将rd的值写入csr，下面这么写是交换a0和sscratch，该指令执行完后，sscratch保存这用户的trapframe帧
+# a0为用户的a0
         csrrw a0, sscratch, a0
 
         # return to user mode and user pc.

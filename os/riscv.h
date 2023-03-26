@@ -198,8 +198,8 @@ static inline void w_mscratch(uint64 x)
 // Supervisor Trap Cause
 static inline uint64 r_scause()
 {
-	uint64 x;
-	asm volatile("csrr %0, scause" : "=r"(x));
+	register uint64 x __asm__("a5");
+	asm volatile("csrr a5, scause" : "=r"(x));
 	return x;
 }
 

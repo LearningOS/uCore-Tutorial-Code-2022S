@@ -3,12 +3,15 @@
 
 #include "types.h"
 
+/**
+ * 该结构用于保存用户陷入内核后的用户上下文和一些内核信息，位于trap_page[TRAP_PAGE_SIZE]中
+ */
 struct trapframe {
-	/*   0 */ uint64 kernel_satp; // kernel page table
-	/*   8 */ uint64 kernel_sp; // top of process's kernel stack
-	/*  16 */ uint64 kernel_trap; // usertrap()
+	/*   0 */ uint64 kernel_satp; // kernel page table， 是否用户态上下文？
+	/*   8 */ uint64 kernel_sp; // top of process's kernel stack  非用户态上下文
+	/*  16 */ uint64 kernel_trap; // usertrap() 是否用户态上下文？
 	/*  24 */ uint64 epc; // saved user program counter
-	/*  32 */ uint64 kernel_hartid; // saved kernel tp
+	/*  32 */ uint64 kernel_hartid; // saved kernel tp 是否用户态上下文？
 	/*  40 */ uint64 ra;
 	/*  48 */ uint64 sp;
 	/*  56 */ uint64 gp;
