@@ -4,6 +4,7 @@
 build
 target
 /user
+/start.sh
 link_app.S
 kernel_app.ld
 *.o
